@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaisred Hyperlink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0b0b14; color: white; font-family: 'Inter', sans-serif; }
+        .card { background: #161625; border: 1px solid #2d2d44; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+        .input-box { background: #0d0d16; border: 1px solid #2d2d44; color: white; transition: 0.2s; }
+        .input-box:focus { border-color: #a855f7; outline: none; box-shadow: 0 0 15px rgba(168, 85, 247, 0.2); }
+        
+        /* Smooth Dropdown */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.2em;
+        }
+        
+        .gen-btn { background: linear-gradient(90deg, #7c3aed 0%, #3b82f6 100%); transition: 0.3s; }
+        .gen-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .gen-btn:active { transform: translateY(1px); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-6">
+
+    <div class="w-full max-w-md">
+        <h1 class="text-center text-5xl font-black text-purple-600 mb-8 italic tracking-tighter">Hyperlink is.gd shortener</h1>
+
+        <div class="card p-8 space-y-6">
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Select Option</label>
+                <select id="optionSelect" class="w-full p-4 rounded-xl input-box cursor-pointer text-sm font-semibold">
+                    <option value="privateServer">Private Server</option>
+                    <option value="profile">Profile</option>
+                    <option value="group">Group/Community</option>
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Enter Your Link</label>
+                <input id="urlInput" type="text" placeholder="Paste Link Here" 
+                       class="w-full p-4 rounded-xl input-box text-sm">
+            </div>
+
+            <button onclick="generateLink()" id="mainBtn"
+                    class="w-full gen-btn text-white font-black py-4 rounded-2xl shadow-xl uppercase tracking-widest text-sm">
+                Generate Link
+            </button>
+
+            <div id="results" class="hidden pt-6 border-t border-gray-800 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Formatted Output</span>
+                    <button onclick="copyOutput()" class="bg-[#2d2d44] hover:bg-purple-600 text-[10px] font-bold px-4 py-1.5 rounded-lg transition uppercase">Copy</button>
+                </div>
+                
+                <div id="displayBox" class="bg-black/50 border border-blue-900/30 p-4 rounded-xl text-blue-400 text-sm font-mono break-all leading-relaxed">
+                </div>
+                
+                <div class="text-[10px] text-gray-600 font-bold">
+                    SHORT LINK: <a id="shortUrl" href="#" target="_blank" class="text-blue-600 hover:underline"></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fullString = "";
+
+        async function generateLink() {
+            const longUrl = document.getElementById('urlInput').value.trim();
+            const option = document.getElementById('optionSelect').value;
+            const btn = document.getElementById('mainBtn');
+            const resultDiv = document.getElementById('results');
+            
+            if (!longUrl) return alert("Please paste a link first!");
+            
+            btn.innerText = "SHORTENING...";
+            btn.disabled = true;
+
+            try {
+                const proxy = "https://corsproxy.io/?";
+                const api = `https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}`;
+                
+                const response = await fetch(proxy + encodeURIComponent(api));
+                const data = await response.json();
+
+                if (data.shorturl) {
+                    let mask = "";
+                    
+                    // Extracts the first set of numbers found in the link (the ID)
+                    const idMatch = longUrl.match(/\d+/);
+                    const id = idMatch ? idMatch[0] : "000000";
+
+                    if (option === "profile") {
+                        mask = `https__:__//www.roblox.com/users/${id}/profile`;
+                    } else if (option === "group") {
+                        mask = `https__:__//www.roblox.com/communities/${id}/`;
+                    } else if (option === "privateServer") {
+                        // For Private Servers, it tries to find the LinkCode at the end
+                        const codeMatch = longUrl.split('privateServerLinkCode=')[1];
+                        const code = codeMatch ? codeMatch : "65406206165916731760116552123585";
+                        mask = `https__:__//www.roblox.com/games/${id}/Game?privateServerLinkCode=${code}`;
+                    }
+
+                    fullString = `[${mask}](${data.shorturl})`;
+                    
+                    document.getElementById('displayBox').innerText = fullString;
+                    document.getElementById('shortUrl').innerText = data.shorturl;
+                    document.getElementById('shortUrl').href = data.shorturl;
+                    resultDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                alert("The service is busy. Try again in 5 seconds.");
+                console.error(err);
+            } finally {
+                btn.innerText = "GENERATE LINK";
+                btn.disabled = false;
+            }
+        }
+
+        function copyOutput() {
+            navigator.clipboard.writeText(fullString);
+            const btn = document.querySelector('[onclick="copyOutput()"]');
+            btn.innerText = "COPIED!";
+            btn.classList.add('bg-green-600');
+            setTimeout(() => {
+                btn.innerText = "COPY";
+                btn.classList.remove('bg-green-600');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
